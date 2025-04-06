@@ -1,0 +1,595 @@
+{
+  "contract_name": "split-x",
+  "contract_version": "0.1.0",
+  "idl_version": "1.0.0",
+  "instantiate": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "InstantiateMsg",
+    "type": "object",
+    "additionalProperties": false
+  },
+  "execute": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "ExecuteMsg",
+    "oneOf": [
+      {
+        "description": "Create a new group with given participants",
+        "type": "object",
+        "required": [
+          "create_group"
+        ],
+        "properties": {
+          "create_group": {
+            "type": "object",
+            "required": [
+              "name",
+              "participants"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "participants": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Addr"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Add an expense to a group",
+        "type": "object",
+        "required": [
+          "add_expense"
+        ],
+        "properties": {
+          "add_expense": {
+            "type": "object",
+            "required": [
+              "amount",
+              "description",
+              "group_id",
+              "paid_by",
+              "participants"
+            ],
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              },
+              "description": {
+                "type": "string"
+              },
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "paid_by": {
+                "$ref": "#/definitions/Addr"
+              },
+              "participants": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Addr"
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Settle all debts a user owes in a specific group",
+        "type": "object",
+        "required": [
+          "settle_group_debt"
+        ],
+        "properties": {
+          "settle_group_debt": {
+            "type": "object",
+            "required": [
+              "group_id"
+            ],
+            "properties": {
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Pay your share for a specific expense",
+        "type": "object",
+        "required": [
+          "pay_expense"
+        ],
+        "properties": {
+          "pay_expense": {
+            "type": "object",
+            "required": [
+              "expense_id",
+              "group_id"
+            ],
+            "properties": {
+              "expense_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Addr": {
+        "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+        "type": "string"
+      }
+    }
+  },
+  "query": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "QueryMsg",
+    "oneOf": [
+      {
+        "description": "Get full group data",
+        "type": "object",
+        "required": [
+          "get_group"
+        ],
+        "properties": {
+          "get_group": {
+            "type": "object",
+            "required": [
+              "group_id"
+            ],
+            "properties": {
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get a specific expense by group and expense ID",
+        "type": "object",
+        "required": [
+          "get_expense"
+        ],
+        "properties": {
+          "get_expense": {
+            "type": "object",
+            "required": [
+              "expense_id",
+              "group_id"
+            ],
+            "properties": {
+              "expense_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get all groups stored in the contract",
+        "type": "object",
+        "required": [
+          "get_all_groups"
+        ],
+        "properties": {
+          "get_all_groups": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get all expenses in a group",
+        "type": "object",
+        "required": [
+          "get_group_expenses"
+        ],
+        "properties": {
+          "get_group_expenses": {
+            "type": "object",
+            "required": [
+              "group_id"
+            ],
+            "properties": {
+              "group_id": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      },
+      {
+        "description": "Get list of groups joined by user",
+        "type": "object",
+        "required": [
+          "get_user_groups"
+        ],
+        "properties": {
+          "get_user_groups": {
+            "type": "object",
+            "required": [
+              "user"
+            ],
+            "properties": {
+              "user": {
+                "$ref": "#/definitions/Addr"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    ],
+    "definitions": {
+      "Addr": {
+        "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+        "type": "string"
+      }
+    }
+  },
+  "migrate": null,
+  "sudo": null,
+  "responses": {
+    "get_all_groups": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AllGroupsResponse",
+      "type": "object",
+      "required": [
+        "groups"
+      ],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              {
+                "$ref": "#/definitions/Group"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Group": {
+          "type": "object",
+          "required": [
+            "creator",
+            "name",
+            "participants"
+          ],
+          "properties": {
+            "creator": {
+              "$ref": "#/definitions/Addr"
+            },
+            "name": {
+              "type": "string"
+            },
+            "participants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Addr"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "get_expense": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Expense",
+      "type": "object",
+      "required": [
+        "amount",
+        "description",
+        "id",
+        "is_paid",
+        "paid_by",
+        "participants",
+        "payments"
+      ],
+      "properties": {
+        "amount": {
+          "type": "integer",
+          "format": "uint128",
+          "minimum": 0.0
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "is_paid": {
+          "type": "boolean"
+        },
+        "paid_by": {
+          "$ref": "#/definitions/Addr"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Addr"
+          }
+        },
+        "payments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Payment"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Payment": {
+          "type": "object",
+          "required": [
+            "amount",
+            "paid",
+            "payer"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "paid": {
+              "type": "boolean"
+            },
+            "payer": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "get_group": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Group",
+      "type": "object",
+      "required": [
+        "creator",
+        "name",
+        "participants"
+      ],
+      "properties": {
+        "creator": {
+          "$ref": "#/definitions/Addr"
+        },
+        "name": {
+          "type": "string"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Addr"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        }
+      }
+    },
+    "get_group_expenses": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GroupExpensesResponse",
+      "type": "object",
+      "required": [
+        "expenses"
+      ],
+      "properties": {
+        "expenses": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Expense"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Expense": {
+          "type": "object",
+          "required": [
+            "amount",
+            "description",
+            "id",
+            "is_paid",
+            "paid_by",
+            "participants",
+            "payments"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "description": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "is_paid": {
+              "type": "boolean"
+            },
+            "paid_by": {
+              "$ref": "#/definitions/Addr"
+            },
+            "participants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Addr"
+              }
+            },
+            "payments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Payment"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "Payment": {
+          "type": "object",
+          "required": [
+            "amount",
+            "paid",
+            "payer"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "paid": {
+              "type": "boolean"
+            },
+            "payer": {
+              "$ref": "#/definitions/Addr"
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    },
+    "get_user_groups": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserGroupsResponse",
+      "type": "object",
+      "required": [
+        "groups"
+      ],
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": [
+              {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              },
+              {
+                "$ref": "#/definitions/Group"
+              }
+            ],
+            "maxItems": 2,
+            "minItems": 2
+          }
+        }
+      },
+      "additionalProperties": false,
+      "definitions": {
+        "Addr": {
+          "description": "A human readable address.\n\nIn Cosmos, this is typically bech32 encoded. But for multi-chain smart contracts no assumptions should be made other than being UTF-8 encoded and of reasonable length.\n\nThis type represents a validated address. It can be created in the following ways 1. Use `Addr::unchecked(input)` 2. Use `let checked: Addr = deps.api.addr_validate(input)?` 3. Use `let checked: Addr = deps.api.addr_humanize(canonical_addr)?` 4. Deserialize from JSON. This must only be done from JSON that was validated before such as a contract's state. `Addr` must not be used in messages sent by the user because this would result in unvalidated instances.\n\nThis type is immutable. If you really need to mutate it (Really? Are you sure?), create a mutable copy using `let mut mutable = Addr::to_string()` and operate on that `String` instance.",
+          "type": "string"
+        },
+        "Group": {
+          "type": "object",
+          "required": [
+            "creator",
+            "name",
+            "participants"
+          ],
+          "properties": {
+            "creator": {
+              "$ref": "#/definitions/Addr"
+            },
+            "name": {
+              "type": "string"
+            },
+            "participants": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Addr"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}
