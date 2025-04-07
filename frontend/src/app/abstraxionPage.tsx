@@ -38,6 +38,9 @@ export default function AbstractionPage({
   const getCount = async () => {
     setLoading(true);
     try {
+      if (!queryClient) {
+        throw new Error("Query client is not initialized");
+      }
       const response = await queryClient.queryContractSmart(contractAddress, { get_count: {} });
       setCount(response.count);
       console.log("Get Count:", response);
