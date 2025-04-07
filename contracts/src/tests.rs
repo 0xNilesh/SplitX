@@ -4,7 +4,7 @@ mod tests {
 
     use crate::contract::{execute, instantiate, query};
     use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, UserGroupsResponse};
-    use crate::state::{Expense};
+    use crate::state::{Expense, Payment};
     use cosmwasm_std::testing::{mock_dependencies, mock_env, mock_info};
     use cosmwasm_std::{from_json, Addr, Uint128};
 
@@ -50,19 +50,21 @@ mod tests {
 
         // Create group
         let creator = mock_info("alice", &[]);
-        let participants = vec![Addr::unchecked("bob"), Addr::unchecked("charlie")];
+        let bob = Addr::unchecked("bob");
+        let charlie = Addr::unchecked("charlie");
+        let participants = vec![bob.clone(), charlie.clone(), creator.sender.clone()];
         execute(
             deps.as_mut(),
             mock_env(),
             creator.clone(),
             ExecuteMsg::CreateGroup {
                 name: "Dinner".to_string(),
-                participants: participants.clone(),
+                participants: vec![bob.clone(), charlie.clone()],
             },
         )
         .unwrap();
 
-        // Add expense
+        // Add expense (amount 300, 3 participants → divisible)
         let expense_msg = ExecuteMsg::AddExpense {
             group_id: 0,
             description: "Dinner bill".to_string(),
@@ -86,61 +88,129 @@ mod tests {
         assert_eq!(expense.description, "Dinner bill");
         assert_eq!(expense.paid_by, creator.sender);
         assert_eq!(expense.participants, participants);
+
+        // New: Check that paid_by entry exists in payments and is marked as paid
+        let payment = expense.payments.iter().find(|p| p.payer == creator.sender).unwrap();
+        assert_eq!(payment.amount, 100);
+        assert!(payment.paid);
     }
 
     #[test]
-    fn test_pay_expense() {
+    fn test_add_expense_invalid_split_should_fail() {
         let mut deps = mock_dependencies();
         instantiate(deps.as_mut(), mock_env(), mock_info("init", &[]), InstantiateMsg {}).unwrap();
 
         let creator = mock_info("alice", &[]);
         let bob = Addr::unchecked("bob");
         let charlie = Addr::unchecked("charlie");
-        let participants = vec![bob.clone(), charlie.clone()];
+        let participants = vec![bob.clone(), charlie.clone(), creator.sender.clone()];
 
-        // Create group and add expense
+        // Create group
         execute(
             deps.as_mut(),
             mock_env(),
             creator.clone(),
             ExecuteMsg::CreateGroup {
                 name: "Trip".to_string(),
-                participants: participants.clone(),
+                participants: vec![bob.clone(), charlie.clone()],
             },
         )
         .unwrap();
 
-        execute(
-            deps.as_mut(),
-            mock_env(),
-            creator.clone(),
-            ExecuteMsg::AddExpense {
-                group_id: 0,
-                description: "Hotel".to_string(),
-                amount: 600,
-                participants: participants.clone(),
-                paid_by: creator.sender.clone(),
-            },
-        )
-        .unwrap();
-
-        // Bob pays his share
-        let payment = mock_info("bob", &[cosmwasm_std::Coin { denom: "uxion".to_string(), amount: Uint128::new(300) }]);
-        let pay_msg = ExecuteMsg::PayExpense {
+        // Add expense (amount 301 → not divisible by 3)
+        let expense_msg = ExecuteMsg::AddExpense {
             group_id: 0,
-            expense_id: 0
+            description: "Invalid Split".to_string(),
+            amount: 301,
+            participants: participants.clone(),
+            paid_by: creator.sender.clone(),
         };
 
-        let res = execute(deps.as_mut(), mock_env(), payment, pay_msg).unwrap();
-        println!("💸 Payment Response: {:?}", res);
-
-        let res = query(
-            deps.as_ref(),
-            mock_env(),
-            QueryMsg::GetExpense { group_id: 0, expense_id: 0 },
-        ).unwrap();
-        let expense: Expense = from_json(&res).unwrap();
-
-        assert!(expense.payments.iter().any(|p| p.payer == bob && p.paid && p.amount == 300));
+        let res = execute(deps.as_mut(), mock_env(), creator.clone(), expense_msg);
+        assert!(res.is_err());
+        let err = res.err().unwrap().to_string();
+        assert!(
+            err.contains("Amount must be divisible equally"),
+            "Unexpected error: {}",
+            err
+        );
     }
+
+    #[test]
+fn test_pay_expense() {
+    let mut deps = mock_dependencies();
+    instantiate(deps.as_mut(), mock_env(), mock_info("init", &[]), InstantiateMsg {}).unwrap();
+
+    let creator = mock_info("alice", &[]);
+    let bob = Addr::unchecked("bob");
+    let charlie = Addr::unchecked("charlie");
+    let participants = vec![bob.clone(), charlie.clone()];
+
+    // Create group
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        creator.clone(),
+        ExecuteMsg::CreateGroup {
+            name: "Trip".to_string(),
+            participants: participants.clone(),
+        },
+    )
+    .unwrap();
+
+    // Add expense to the group
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        creator.clone(),
+        ExecuteMsg::AddExpense {
+            group_id: 0,
+            description: "Hotel".to_string(),
+            amount: 600,
+            participants: participants.clone(),
+            paid_by: creator.sender.clone(),
+        },
+    )
+    .unwrap();
+
+    // Bob pays his share
+    let bob_payment = mock_info("bob", &[cosmwasm_std::Coin { denom: "uxion".to_string(), amount: Uint128::new(300) }]);
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        bob_payment,
+        ExecuteMsg::PayExpense {
+            group_id: 0,
+            expense_id: 0
+        },
+    ).unwrap();
+
+    // Charlie pays his share
+    let charlie_payment = mock_info("charlie", &[cosmwasm_std::Coin { denom: "uxion".to_string(), amount: Uint128::new(300) }]);
+    execute(
+        deps.as_mut(),
+        mock_env(),
+        charlie_payment,
+        ExecuteMsg::PayExpense {
+            group_id: 0,
+            expense_id: 0
+        },
+    ).unwrap();
+
+    // Query the expense
+    let res = query(
+        deps.as_ref(),
+        mock_env(),
+        QueryMsg::GetExpense { group_id: 0, expense_id: 0 },
+    ).unwrap();
+    let expense: Expense = from_json(&res).unwrap();
+
+    // Check individual payments
+    assert!(expense.payments.iter().any(|p| p.payer == bob && p.paid && p.amount == 300));
+    assert!(expense.payments.iter().any(|p| p.payer == charlie && p.paid && p.amount == 300));
+
+    // Check if the expense is fully paid
+    assert_eq!(expense.is_paid, true, "Expense should be marked as fully paid");
+}
+
 }

@@ -10,7 +10,7 @@ import { AppProvider } from "@/context/AppContext";
 const inter = Inter({ subsets: ["latin"] });
 
 const treasuryConfig = {
-  treasury: "xion12txgezghvz7t09xe33wvh548rr9dnggdfsmtr6xccxf20e0620tsjrzheg",
+  treasury: "xion1hpfm7zgg3qal9xx4m4mhgrhhsu0scnw500khfcca3mg85cyu8ddse7t3ug",
   rpcUrl: "https://rpc.xion-testnet-2.burnt.com/",
   restUrl: "https://api.xion-testnet-2.burnt.com/",
 };

@@ -112,6 +112,26 @@ fn try_add_expense(
         return Err(ContractError::Std(StdError::generic_err("Paid_by must be a group participant")));
     }
 
+    // ✅ Check for equal split
+    let num_participants = participants.len() as u128;
+    if amount % num_participants != 0 {
+        return Err(ContractError::Std(StdError::generic_err(
+            "Amount must be divisible equally among participants",
+        )));
+    }
+
+    let share = amount / num_participants;
+
+    // ✅ Pre-fill payment if paid_by is also a participant
+    let mut payments = vec![];
+    if participants.contains(&paid_by) {
+        payments.push(Payment {
+            payer: paid_by.clone(),
+            amount: share,
+            paid: true,
+        });
+    }
+
     let expense_id = GROUP_EXPENSES_COUNT
         .may_load(deps.storage, group_id)?
         .unwrap_or_default();
@@ -123,7 +143,7 @@ fn try_add_expense(
         amount,
         description: description.clone(),
         is_paid: false,
-        payments: vec![],
+        payments,
     };
 
     GROUP_EXPENSES.save(deps.storage, (group_id, expense_id), &expense)?;
