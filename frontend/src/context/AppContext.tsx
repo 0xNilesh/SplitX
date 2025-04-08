@@ -33,7 +33,11 @@ interface AppContextType {
     participants: string[],
     description: string
   ) => Promise<void>;
-  payExpense: (groupId: number, expenseId: number) => Promise<void>;
+  payExpense: (
+    groupId: number,
+    expenseId: number,
+    amount: number
+  ) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -157,67 +161,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchUserGroups = async () => {
     if (!queryClient || !account) return;
-  
+
     try {
       const res = await queryClient.queryContractSmart(splitXContractAddress, {
         get_user_groups: { user: account.bech32Address },
       });
-  
+
       // Update participants + creator here itself
-      const enrichedGroups = res.groups.map(
-        ([id, group]: [
-          number,
-          any
-        ]) => {
-          return [
-            id,
-            {
-              ...group,
-              participants: group.participants.map((wallet: string) => ({
-                walletAddress: wallet,
-                name: shortenWallet(wallet), // or shortenWallet(wallet)
-              })),
-              creator: group.creator,
-            },
-          ];
-        }
-      );
-  
+      const enrichedGroups = res.groups.map(([id, group]: [number, any]) => {
+        return [
+          id,
+          {
+            ...group,
+            participants: group.participants.map((wallet: string) => ({
+              walletAddress: wallet,
+              name: shortenWallet(wallet), // or shortenWallet(wallet)
+            })),
+            creator: group.creator,
+          },
+        ];
+      });
+
       let totalOwe = 0;
       let totalOwed = 0;
-  
+
       const formattedGroups: Group[] = await Promise.all(
         enrichedGroups.map(
           async ([id, group]: [
             number,
-            Omit<Group, "id" | "expenses" | "owedCurrentUser" | "oweCurrentUser">
+            Omit<
+              Group,
+              "id" | "expenses" | "owedCurrentUser" | "oweCurrentUser"
+            >
           ]) => {
             const expenses = await fetchGroupExpenses(id);
             console.log("Fetched expenses for group:", id, expenses);
-  
+
             let owedCurrentUser = 0;
             let oweCurrentUser = 0;
-  
+
             for (const expense of expenses) {
               const isPayer =
                 expense.paidBy.walletAddress === account.bech32Address;
-  
+
               for (const participant of expense.participants) {
                 const isCurrentUser =
                   participant.member.walletAddress === account.bech32Address;
-  
+
                 if (isPayer && !isCurrentUser && !participant.settled) {
                   owedCurrentUser += participant.amount;
                   totalOwed += participant.amount;
                 }
-  
+
                 if (!isPayer && isCurrentUser && !participant.settled) {
                   oweCurrentUser += participant.amount;
                   totalOwe += participant.amount;
                 }
               }
             }
-  
+
             return {
               ...group,
               id: String(id),
@@ -229,10 +231,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         )
       );
-  
+
       setGroups(formattedGroups);
       console.log("Formatted groups:", formattedGroups);
-  
+
       const userName = shortenWallet(account.bech32Address);
       setUser({
         id: account.bech32Address,
@@ -246,7 +248,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       console.error("fetchUserGroups error:", err);
     }
   };
-  
 
   // ========== TX FUNCTIONS ==========
   const createGroup = async (name: string, participants: string[]) => {
@@ -265,7 +266,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
         "auto"
       );
 
-      // console.log("Group created");
+      console.log("Group created");
       await fetchUserGroups();
     } catch (err) {
       console.error("createGroup error:", err);
@@ -298,12 +299,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
       );
 
       console.log("Expense added");
+      await fetchUserGroups();
     } catch (err) {
       console.error("addExpenseTx error:", err);
     }
   };
 
-  const payExpense = async (groupId: number, expenseId: number) => {
+  const payExpense = async (
+    groupId: number,
+    expenseId: number,
+    amount: number
+  ) => {
     if (!queryClient || !account) return;
 
     try {
@@ -316,10 +322,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
             expense_id: expenseId,
           },
         },
-        "auto"
+        "auto",
+        undefined,
+        [
+          {
+            denom: "uxion",
+            amount: String(amount), // amount in micro (uxion) as string
+          },
+        ]
       );
 
       console.log("Expense paid");
+      await fetchUserGroups();
     } catch (err) {
       console.error("payExpense error:", err);
     }

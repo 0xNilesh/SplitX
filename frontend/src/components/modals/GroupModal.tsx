@@ -1,6 +1,11 @@
-
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -15,35 +20,38 @@ interface GroupModalProps {
 
 export const GroupModal = ({ isOpen, onClose }: GroupModalProps) => {
   const { toast } = useToast();
-  const { user, addGroup } = useApp();
+  const { user, createGroup } = useApp();
   const [groupName, setGroupName] = useState("");
-  const [participants, setParticipants] = useState([
-    { id: "participant1", name: "", walletAddress: "" },
-  ]);
+  const [participants, setParticipants] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (user?.walletAddress) {
+      setParticipants([user.walletAddress]);
+    }
+  }, [user]);
 
   const handleAddParticipant = () => {
-    setParticipants([
-      ...participants,
-      { id: `participant${participants.length + 2}`, name: "", walletAddress: "" },
-    ]);
+    setParticipants([...participants, ""]);
   };
 
-  const handleRemoveParticipant = (id: string) => {
-    if (participants.length > 1) {
-      setParticipants(participants.filter((p) => p.id !== id));
+  const handleRemoveParticipant = (index: number) => {
+    // Prevent removing the first participant (current user)
+    if (index > 0) {
+      const updated = [...participants];
+      updated.splice(index, 1);
+      setParticipants(updated);
     }
   };
 
-  const handleParticipantChange = (id: string, field: "name" | "walletAddress", value: string) => {
-    setParticipants(
-      participants.map((p) => (p.id === id ? { ...p, [field]: value } : p))
-    );
+  const handleParticipantChange = (index: number, value: string) => {
+    const updated = [...participants];
+    updated[index] = value;
+    setParticipants(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form
+
     if (!groupName.trim()) {
       toast({
         title: "Error",
@@ -53,52 +61,28 @@ export const GroupModal = ({ isOpen, onClose }: GroupModalProps) => {
       return;
     }
 
-    const validParticipants = participants.filter(
-      (p) => p.name.trim() !== "" && p.walletAddress.trim() !== ""
-    );
-
-    if (validParticipants.length === 0) {
+    const nonUserParticipants = participants
+      .slice(1)
+      .filter((addr) => addr.trim() !== "");
+    console.log(nonUserParticipants);
+    if (nonUserParticipants.length === 0) {
       toast({
         title: "Error",
-        description: "Please add at least one valid participant",
+        description: "Please add at least one more participant",
         variant: "destructive",
       });
       return;
     }
 
-    // Create group with current user and valid participants
-    const members = [
-      // Add current user
-      {
-        id: user?.id || "user1",
-        name: user?.name || "You",
-        walletAddress: user?.walletAddress || "0x1234...5678",
-        avatar: user?.avatar,
-      },
-      // Add participants
-      ...validParticipants.map((p, index) => ({
-        id: `new-user-${index + 1}`,
-        name: p.name,
-        walletAddress: p.walletAddress,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name}`,
-      })),
-    ];
-
-    addGroup({
-      name: groupName,
-      members,
-      expenses: [],
-      totalAmount: 0,
-    });
+    await createGroup(groupName, participants);
 
     toast({
       title: "Success",
       description: `Group "${groupName}" created successfully`,
     });
 
-    // Reset form
     setGroupName("");
-    setParticipants([{ id: "participant1", name: "", walletAddress: "" }]);
+    setParticipants([user?.walletAddress || ""]);
     onClose();
   };
 
@@ -117,7 +101,6 @@ export const GroupModal = ({ isOpen, onClose }: GroupModalProps) => {
               placeholder="Enter group name"
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
-              className="col-span-3"
             />
           </div>
 
@@ -134,38 +117,35 @@ export const GroupModal = ({ isOpen, onClose }: GroupModalProps) => {
               </Button>
             </div>
 
-            {participants.map((participant) => (
+            {participants.map((walletAddress, index) => (
               <div
-                key={participant.id}
-                className="grid grid-cols-[1fr,1fr,auto] gap-2 items-center"
+                key={index}
+                className="grid grid-cols-[1fr,auto] gap-2 items-center"
               >
-                <Input
-                  placeholder="Name"
-                  value={participant.name}
-                  onChange={(e) =>
-                    handleParticipantChange(participant.id, "name", e.target.value)
-                  }
-                />
-                <Input
-                  placeholder="Wallet Address"
-                  value={participant.walletAddress}
-                  onChange={(e) =>
-                    handleParticipantChange(
-                      participant.id,
-                      "walletAddress",
-                      e.target.value
-                    )
-                  }
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemoveParticipant(participant.id)}
-                  disabled={participants.length === 1}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                {index === 0 ? (
+                  <div className="text-sm px-3 py-2 border rounded bg-muted text-muted-foreground">
+                    {walletAddress.slice(0, 9)}...{walletAddress.slice(-4)}{" "}
+                    (you)
+                  </div>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="Wallet Address"
+                      value={walletAddress}
+                      onChange={(e) =>
+                        handleParticipantChange(index, e.target.value)
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveParticipant(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -179,7 +159,9 @@ export const GroupModal = ({ isOpen, onClose }: GroupModalProps) => {
             >
               Cancel
             </Button>
-            <Button type="submit" className="bg-splitx-blue hover:bg-blue-700">Create Group</Button>
+            <Button type="submit" className="bg-splitx-blue hover:bg-blue-700">
+              Create Group
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

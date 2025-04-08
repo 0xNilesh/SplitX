@@ -37,7 +37,7 @@ import { Expense, Group } from "@/types";
 
 export default function GroupPage({ params }: { params: { id: string } }) {
   const groupId = params.id;
-  const { user, groups } = useApp();
+  const { user, groups, payExpense } = useApp();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
   // const [userAddress, setUserAddress] = useState("0x123...456"); // Simulating the connected wallet
@@ -106,7 +106,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
       return {
         status: userSplit.settled ? "paid" : "unpaid",
         amount: userSplit.amount,
-        message: userSplit.settled ? "Your share is paid" : "You owe this amount",
+        message: userSplit.settled
+          ? "Your share is paid"
+          : "You owe this amount",
       };
     }
     return {
@@ -124,7 +126,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
             <div>
               <h1 className="text-3xl font-bold">{group.name}</h1>
               <p className="text-muted-foreground">
-                {group.participants.length} participants
+                {group.participants.length} members
               </p>
             </div>
             <div className="flex gap-3">
@@ -160,7 +162,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
             <Card className="p-6">
               <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Participants
+                Members
               </h2>
               <div className="space-y-3">
                 {group.participants?.map((participant) => (
@@ -169,11 +171,11 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                     className="flex items-center gap-3"
                   >
                     <img
-                              key={participant.walletAddress}
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant?.name}`}
-                              alt={participant?.name}
-                              className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
-                            />
+                      key={participant.walletAddress}
+                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant?.name}`}
+                      alt={participant?.name}
+                      className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
+                    />
                     <div>
                       <p className="font-medium">
                         {participant.name || "Unknown"}
@@ -218,7 +220,8 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                     <TableBody>
                       {group.expenses.map((expense) => {
                         const paidByUser = group.participants.find(
-                          (p) => p.walletAddress === expense.paidBy.walletAddress
+                          (p) =>
+                            p.walletAddress === expense.paidBy.walletAddress
                         );
                         const userSplitStatus =
                           getUserSplitStatusForExpense(expense);
@@ -231,12 +234,12 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                             <TableCell>${expense.amount.toFixed(2)}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                              <img
-                              key={expense.paidBy.walletAddress}
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${expense.paidBy?.name}`}
-                              alt={expense.paidBy?.name}
-                              className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
-                            />
+                                <img
+                                  key={expense.paidBy.walletAddress}
+                                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${expense.paidBy?.name}`}
+                                  alt={expense.paidBy?.name}
+                                  className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
+                                />
                                 {/* <Avatar className="h-6 w-6">
                                   <AvatarFallback>
                                     {getInitials(
@@ -246,7 +249,10 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                                 </Avatar> */}
                                 <span>
                                   {paidByUser?.name ||
-                                    expense.paidBy.walletAddress.substring(0, 6) + "..."}
+                                    expense.paidBy.walletAddress.substring(
+                                      0,
+                                      6
+                                    ) + "..."}
                                 </span>
                               </div>
                             </TableCell>
@@ -272,10 +278,17 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                               )}
                             </TableCell>
                             <TableCell>
-                              {userSplitStatus.status === "unpaid" && (
+                              {userSplitStatus.status === "unpaid" && userSplitStatus.amount && (
                                 <Button
                                   size="sm"
                                   className="h-8 bg-splitx-blue hover:bg-blue-700 shadow-lg "
+                                  onClick={() =>
+                                    payExpense(
+                                      Number(groupId),
+                                      Number(expense.id),
+                                      userSplitStatus.amount
+                                    )
+                                  }
                                 >
                                   Pay ${userSplitStatus.amount?.toFixed(2)}
                                 </Button>
@@ -311,7 +324,8 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                               <p className="text-sm">
                                 Paid by{" "}
                                 {paidByUser?.name ||
-                                  expense.paidBy.walletAddress.substring(0, 6) + "..."}
+                                  expense.paidBy.walletAddress.substring(0, 6) +
+                                    "..."}
                               </p>
                             </div>
                           </div>
@@ -320,56 +334,62 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                             Split Details
                           </h5>
                           <div className="space-y-2">
-                            {expense.participants.map((participant, index: number) => {
-                              // const participant = group.participants.find(
-                              //   (p) => p.address === split.address
-                              // );
-                              return (
-                                <div
-                                  key={index}
-                                  className="flex justify-between items-center"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    {/* <Avatar className="h-6 w-6">
+                            {expense.participants.map(
+                              (participant, index: number) => {
+                                // const participant = group.participants.find(
+                                //   (p) => p.address === split.address
+                                // );
+                                return (
+                                  <div
+                                    key={index}
+                                    className="flex justify-between items-center"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {/* <Avatar className="h-6 w-6">
                                       <AvatarFallback>
                                         {getInitials(
                                           participant.member.walletAddress
                                         )}
                                       </AvatarFallback>
                                     </Avatar> */}
-                                    <img
-                              key={participant.member.walletAddress}
-                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant.member?.name}`}
-                              alt={participant.member?.name}
-                              className="inline-block h-6 w-6 rounded-full ring-2 ring-white"
-                            />
-                                    <span>
-                                      {participant.member.name ||
-                                        participant.member.walletAddress.substring(0, 6) +
-                                        "..."}
-                                    </span>
+                                      <img
+                                        key={participant.member.walletAddress}
+                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant.member?.name}`}
+                                        alt={participant.member?.name}
+                                        className="inline-block h-6 w-6 rounded-full ring-2 ring-white"
+                                      />
+                                      <span>
+                                        {participant.member.name ||
+                                          participant.member.walletAddress.substring(
+                                            0,
+                                            6
+                                          ) + "..."}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span>
+                                        ${participant.amount.toFixed(2)}
+                                      </span>
+                                      {participant.settled ? (
+                                        <Badge
+                                          variant="outline"
+                                          className="bg-green-500/10 text-green-500 border-green-500/20"
+                                        >
+                                          Paid
+                                        </Badge>
+                                      ) : (
+                                        <Badge
+                                          variant="outline"
+                                          className="bg-orange-500/10 text-orange-500 border-orange-500/20"
+                                        >
+                                          Unpaid
+                                        </Badge>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
-                                    <span>${participant.amount.toFixed(2)}</span>
-                                    {participant.settled ? (
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-green-500/10 text-green-500 border-green-500/20"
-                                      >
-                                        Paid
-                                      </Badge>
-                                    ) : (
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-orange-500/10 text-orange-500 border-orange-500/20"
-                                      >
-                                        Unpaid
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              }
+                            )}
                           </div>
                         </div>
                       );
@@ -383,9 +403,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                   <p className="text-muted-foreground mb-4">
                     Start adding expenses to this group.
                   </p>
-                  <Link href={`/groups/${groupId}/add-expense`}>
-                    <Button size="sm">Add First Expense</Button>
-                  </Link>
+                  {/* <Link href={`/groups/${groupId}/add-expense`}> */}
+                    <Button size="sm" onClick={() => setShowExpenseModal(true)}>Add First Expense</Button>
+                  {/* </Link> */}
                 </div>
               )}
             </Card>
@@ -397,6 +417,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
         isOpen={showExpenseModal}
         onClose={() => setShowExpenseModal(false)}
         groups={groups}
+        groupId={groupId}
       />
     </AbstractionPage>
   );
