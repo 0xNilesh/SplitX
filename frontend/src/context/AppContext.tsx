@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Group, User } from "@/types";
-import { currentUser, mockGroups } from "@/data/mockData";
 import {
   useAbstraxionAccount,
   useAbstraxionClient,
