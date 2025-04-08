@@ -15,6 +15,15 @@ Built with Web3 under the hood, but feels like your favorite Web2 app.
 
 ---
 
+## 🖼️ Screenshots
+<img width="1415" alt="image" src="https://github.com/user-attachments/assets/16ae6372-1477-4387-987c-f8ac3906abef" />
+<img width="1388" alt="image" src="https://github.com/user-attachments/assets/8902bec0-4bee-481d-929f-38c59d4c78be" />
+<img width="1201" alt="image" src="https://github.com/user-attachments/assets/ee6e3652-5b42-4b4d-806c-964ab828ace5" />
+<img width="1233" alt="image" src="https://github.com/user-attachments/assets/d97b0eff-e387-4df1-a25e-68969fd73717" />
+<img width="1262" alt="image" src="https://github.com/user-attachments/assets/12ca5b20-fb11-485a-bfa6-3af403f659ff" />
+
+---
+
 ## ✨ Why We Built on Xion
 
 SplitX is powered by **Xion**, the first blockchain to offer **native account abstraction and gasless transactions**. That means:
