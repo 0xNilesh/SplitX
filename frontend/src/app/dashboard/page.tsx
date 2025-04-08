@@ -83,15 +83,25 @@ export default function DashboardPage() {
               <CardContent className="p-6 bg-gradient-to-br from-blue-50 to-white">
                 <div className="flex justify-between items-center mb-4">
                   <p className="text-sm font-medium text-gray-600">
-                    Total Balance
+                    Net Balance
                   </p>
                   <div className="p-2 bg-blue-100 rounded-full">
                     <ArrowRight className="h-5 w-5 text-splitx-blue" />
                   </div>
                 </div>
-                <p className="text-3xl font-bold text-gray-800">
-                  ${user.totalBalance.toFixed(2)}
-                </p>
+                {(() => {
+                  const netBalance = user.totalOwed - user.totalOwe;
+                  const isPositive = netBalance >= 0;
+                  return (
+                    <p
+                      className={`text-3xl font-bold ${
+                        isPositive ? "text-splitx-green" : "text-splitx-red"
+                      }`}
+                    >
+                      ${netBalance.toFixed(2)}
+                    </p>
+                  );
+                })()}
               </CardContent>
             </Card>
           </motion.div>
@@ -151,58 +161,67 @@ export default function DashboardPage() {
         </motion.div>
 
         <motion.div variants={item} className="space-y-4">
-          {groups.map((group, index) => (
-            <motion.div
-              key={group.id}
-              variants={item}
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300 }}
-            >
-              <Link href={`/groups/${group.id}`}>
-                <Card className="overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
-                  <CardContent className="p-5 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <div className="flex -space-x-3 overflow-hidden mr-4">
-                        {group.members.slice(0, 4).map((member, index) => (
-                          <img
-                            key={member.id}
-                            src={
-                              member.avatar ||
-                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`
-                            }
-                            alt={member.name}
-                            className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
-                          />
-                        ))}
-                        {group.members.length > 4 && (
-                          <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 ring-2 ring-white text-xs font-medium">
-                            +{group.members.length - 4}
+          {groups &&
+            groups.map((group, index) => (
+              <motion.div
+                key={group.id}
+                variants={item}
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <Link href={`/groups/${group.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
+                    <CardContent className="p-5 flex justify-between items-center">
+                      <div className="flex items-center">
+                        <div className="flex -space-x-3 overflow-hidden mr-4">
+                          {group.participants
+                            ?.slice(0, 4)
+                            .map((participant, index) => (
+                              <img
+                                key={index}
+                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant?.name}`}
+                                alt={participant?.name}
+                                className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
+                              />
+                            ))}
+                          {group.participants?.length > 4 && (
+                            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 ring-2 ring-white text-xs font-medium">
+                              +{group.participants.length - 4}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-lg">
+                            {group.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {group.participants?.length} members
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right space-y-1">
+                        {group.oweCurrentUser > 0 && (
+                          <div className="text-splitx-red font-medium">
+                            You owe ${group.oweCurrentUser.toFixed(2)}
                           </div>
                         )}
+                        {group.owedCurrentUser > 0 && (
+                          <div className="text-splitx-green font-medium">
+                            You are owed ${group.owedCurrentUser.toFixed(2)}
+                          </div>
+                        )}
+                        {group.oweCurrentUser === 0 &&
+                          group.owedCurrentUser === 0 && (
+                            <div className="text-gray-500 text-sm">
+                              Settled up
+                            </div>
+                          )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">{group.name}</h3>
-                        <p className="text-sm text-gray-500">
-                          {group.members.length} members
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      {Math.random() > 0.5 ? (
-                        <div className="text-splitx-green font-medium">
-                          Owed ${(Math.random() * 200).toFixed(2)}
-                        </div>
-                      ) : (
-                        <div className="text-splitx-red font-medium">
-                          You owe ${(Math.random() * 200).toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            </motion.div>
-          ))}
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
         </motion.div>
 
         {/* Expense Modal */}

@@ -8,7 +8,7 @@ export const currentUser: User = {
   avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=John",
   totalBalance: 1234.56,
   totalOwed: 850.00,
-  totalOwe: 384.44
+  totalOwe: 984.44
 };
 
 export const mockGroups: Group[] = [

@@ -33,80 +33,22 @@ import { Navbar } from "@/components/layout/Navbar";
 import Link from "next/link";
 import { ExpenseModal } from "@/components/modals/ExpenseModal";
 import { useApp } from "@/context/AppContext";
-
-// Mock data for the example
-const mockGroups = [
-  {
-    id: "1",
-    name: "Trip to Miami",
-    creator: "0x123...456",
-    participants: [
-      { address: "0x123...456", name: "You" },
-      { address: "0x789...012", name: "Alice" },
-      { address: "0x345...678", name: "Bob" },
-      { address: "0x901...234", name: "Charlie" },
-    ],
-    expenses: [
-      {
-        id: "e1",
-        description: "Hotel Booking",
-        amount: 450.0,
-        paidBy: "0x123...456",
-        date: "2023-06-15",
-        splits: [
-          { address: "0x123...456", amount: 112.5, paid: true },
-          { address: "0x789...012", amount: 112.5, paid: false },
-          { address: "0x345...678", amount: 112.5, paid: false },
-          { address: "0x901...234", amount: 112.5, paid: true },
-        ],
-      },
-      {
-        id: "e2",
-        description: "Dinner at Seafood Place",
-        amount: 180.25,
-        paidBy: "0x789...012",
-        date: "2023-06-16",
-        splits: [
-          { address: "0x123...456", amount: 45.06, paid: false },
-          { address: "0x789...012", amount: 45.06, paid: true },
-          { address: "0x345...678", amount: 45.06, paid: true },
-          { address: "0x901...234", amount: 45.07, paid: false },
-        ],
-      },
-      {
-        id: "e3",
-        description: "Beach Activities",
-        amount: 120.0,
-        paidBy: "0x345...678",
-        date: "2023-06-17",
-        splits: [
-          { address: "0x123...456", amount: 30.0, paid: true },
-          { address: "0x789...012", amount: 30.0, paid: false },
-          { address: "0x345...678", amount: 30.0, paid: true },
-          { address: "0x901...234", amount: 30.0, paid: false },
-        ],
-      },
-    ],
-  },
-  // Add more mock groups if needed
-];
+import { Expense, Group } from "@/types";
 
 export default function GroupPage({ params }: { params: { id: string } }) {
   const groupId = params.id;
-  const [group, setGroup] = useState<any>(null);
   const { user, groups } = useApp();
+  const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userAddress, setUserAddress] = useState("0x123...456"); // Simulating the connected wallet
+  // const [userAddress, setUserAddress] = useState("0x123...456"); // Simulating the connected wallet
   const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   useEffect(() => {
-    // Simulate fetching group data
-    setTimeout(() => {
-      const foundGroup = mockGroups.find((g) => g.id === groupId);
-      setGroup(foundGroup);
-      setLoading(false);
-    }, 500);
-  }, [groupId]);
+    if (!user?.walletAddress) return;
+    const foundGroup = groups.find((g: Group) => g.id === groupId);
+    setGroup(foundGroup || null);
+    setLoading(false);
+  }, [groupId, groups, user?.walletAddress]);
 
   if (loading) {
     return (
@@ -150,11 +92,11 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     return address.substring(2, 4).toUpperCase();
   };
 
-  const getUserSplitStatusForExpense = (expense: any) => {
-    const userSplit = expense.splits.find(
-      (split: any) => split.address === userAddress
+  const getUserSplitStatusForExpense = (expense: Expense) => {
+    const userSplit = expense.participants.find(
+      (participant) => participant.member.walletAddress === user?.walletAddress
     );
-    if (expense.paidBy === userAddress) {
+    if (expense.paidBy.walletAddress === user?.walletAddress) {
       return {
         status: "paid",
         message: "You paid this expense",
@@ -162,9 +104,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
     }
     if (userSplit) {
       return {
-        status: userSplit.paid ? "paid" : "unpaid",
+        status: userSplit.settled ? "paid" : "unpaid",
         amount: userSplit.amount,
-        message: userSplit.paid ? "Your share is paid" : "You owe this amount",
+        message: userSplit.settled ? "Your share is paid" : "You owe this amount",
       };
     }
     return {
@@ -221,22 +163,23 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                 Participants
               </h2>
               <div className="space-y-3">
-                {group.participants.map((participant: any) => (
+                {group.participants?.map((participant) => (
                   <div
-                    key={participant.address}
+                    key={participant.walletAddress}
                     className="flex items-center gap-3"
                   >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        {getInitials(participant.name || participant.address)}
-                      </AvatarFallback>
-                    </Avatar>
+                    <img
+                              key={participant.walletAddress}
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant?.name}`}
+                              alt={participant?.name}
+                              className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
+                            />
                     <div>
                       <p className="font-medium">
                         {participant.name || "Unknown"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {participant.address}
+                        {participant.name}
                       </p>
                     </div>
                   </div>
@@ -267,15 +210,15 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                         <TableHead>Description</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Paid By</TableHead>
-                        <TableHead>Date</TableHead>
+                        {/* <TableHead>Date</TableHead> */}
                         <TableHead>Your Status</TableHead>
                         <TableHead>Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {group.expenses.map((expense: any) => {
+                      {group.expenses.map((expense) => {
                         const paidByUser = group.participants.find(
-                          (p: any) => p.address === expense.paidBy
+                          (p) => p.walletAddress === expense.paidBy.walletAddress
                         );
                         const userSplitStatus =
                           getUserSplitStatusForExpense(expense);
@@ -288,20 +231,26 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                             <TableCell>${expense.amount.toFixed(2)}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
+                              <img
+                              key={expense.paidBy.walletAddress}
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${expense.paidBy?.name}`}
+                              alt={expense.paidBy?.name}
+                              className="inline-block h-8 w-8 rounded-full ring-2 ring-white"
+                            />
+                                {/* <Avatar className="h-6 w-6">
                                   <AvatarFallback>
                                     {getInitials(
-                                      paidByUser?.name || expense.paidBy
+                                      paidByUser?.name || expense.paidBy.walletAddress
                                     )}
                                   </AvatarFallback>
-                                </Avatar>
+                                </Avatar> */}
                                 <span>
                                   {paidByUser?.name ||
-                                    expense.paidBy.substring(0, 6) + "..."}
+                                    expense.paidBy.walletAddress.substring(0, 6) + "..."}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell>{expense.date}</TableCell>
+                            {/* <TableCell>{expense.date}</TableCell> */}
                             <TableCell>
                               {userSplitStatus.status === "paid" && (
                                 <Badge
@@ -340,9 +289,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
 
                   <div className="space-y-4 mt-6">
                     <h3 className="text-lg font-medium">Expense Details</h3>
-                    {group.expenses.map((expense: any) => {
+                    {group.expenses.map((expense) => {
                       const paidByUser = group.participants.find(
-                        (p: any) => p.address === expense.paidBy
+                        (p) => p.walletAddress === expense.paidBy.walletAddress
                       );
                       return (
                         <div key={expense.id} className="border rounded-lg p-4">
@@ -351,9 +300,9 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                               <h4 className="font-semibold text-lg">
                                 {expense.description}
                               </h4>
-                              <p className="text-muted-foreground text-sm">
+                              {/* <p className="text-muted-foreground text-sm">
                                 Added on {expense.date}
-                              </p>
+                              </p> */}
                             </div>
                             <div className="text-right">
                               <p className="font-bold text-lg">
@@ -362,7 +311,7 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                               <p className="text-sm">
                                 Paid by{" "}
                                 {paidByUser?.name ||
-                                  expense.paidBy.substring(0, 6) + "..."}
+                                  expense.paidBy.walletAddress.substring(0, 6) + "..."}
                               </p>
                             </div>
                           </div>
@@ -371,31 +320,38 @@ export default function GroupPage({ params }: { params: { id: string } }) {
                             Split Details
                           </h5>
                           <div className="space-y-2">
-                            {expense.splits.map((split: any, index: number) => {
-                              const participant = group.participants.find(
-                                (p: any) => p.address === split.address
-                              );
+                            {expense.participants.map((participant, index: number) => {
+                              // const participant = group.participants.find(
+                              //   (p) => p.address === split.address
+                              // );
                               return (
                                 <div
                                   key={index}
                                   className="flex justify-between items-center"
                                 >
                                   <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6">
+                                    {/* <Avatar className="h-6 w-6">
                                       <AvatarFallback>
                                         {getInitials(
-                                          participant?.name || split.address
+                                          participant.member.walletAddress
                                         )}
                                       </AvatarFallback>
-                                    </Avatar>
+                                    </Avatar> */}
+                                    <img
+                              key={participant.member.walletAddress}
+                              src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant.member?.name}`}
+                              alt={participant.member?.name}
+                              className="inline-block h-6 w-6 rounded-full ring-2 ring-white"
+                            />
                                     <span>
-                                      {participant?.name ||
-                                        split.address.substring(0, 6) + "..."}
+                                      {participant.member.name ||
+                                        participant.member.walletAddress.substring(0, 6) +
+                                        "..."}
                                     </span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <span>${split.amount.toFixed(2)}</span>
-                                    {split.paid ? (
+                                    <span>${participant.amount.toFixed(2)}</span>
+                                    {participant.settled ? (
                                       <Badge
                                         variant="outline"
                                         className="bg-green-500/10 text-green-500 border-green-500/20"

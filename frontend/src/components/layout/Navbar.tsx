@@ -20,7 +20,7 @@ export const Navbar = () => {
           </Link>
 
           {isAuthenticated && (
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="flex items-center gap-6">
               <Link
                 href="/dashboard"
                 className={`group flex items-center px-3 py-2 rounded-full hover:bg-blue-50 transition-colors ${
@@ -52,7 +52,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <>
-              <motion.div whileHover={{ scale: 1.1 }}>
+              {/* <motion.div whileHover={{ scale: 1.1 }}>
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <Bell className="w-5 h-5" />
                 </Button>
@@ -61,7 +61,7 @@ export const Navbar = () => {
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <User className="w-5 h-5" />
                 </Button>
-              </motion.div>
+              </motion.div> */}
             </>
           ) : (
             <Link href="/dashboard">

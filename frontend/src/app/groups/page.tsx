@@ -88,26 +88,23 @@ export default function GroupsPage() {
                     <div className="mb-6">
                       <h2 className="text-2xl font-bold mb-2">{group.name}</h2>
                       <div className="flex items-center text-sm text-gray-500">
-                        <span>{group.members.length} members</span>
+                        <span>{group?.participants?.length} members</span>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex -space-x-3 overflow-hidden">
-                        {group.members.slice(0, 4).map((member) => (
+                        {group?.participants?.slice(0, 4).map((participant, index) => (
                           <img
-                            key={member.id}
-                            src={
-                              member.avatar ||
-                              `https://api.dicebear.com/7.x/avataaars/svg?seed=${member.id}`
-                            }
-                            alt={member.name}
+                            key={index}
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${participant.name}`}
+                            alt={participant.name}
                             className="inline-block h-10 w-10 rounded-full ring-2 ring-white"
                           />
                         ))}
-                        {group.members.length > 4 && (
+                        {group?.participants?.length > 4 && (
                           <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-gray-200 ring-2 ring-white text-xs font-medium">
-                            +{group.members.length - 4}
+                            +{group?.participants?.length - 4}
                           </div>
                         )}
                       </div>
